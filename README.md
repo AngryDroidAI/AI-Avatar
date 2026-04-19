@@ -1,0 +1,2465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEURAL WIKI v2.0 // AI LLM Chat</title>
+    <meta name="description" content="Cyberpunk AI Wiki with LLM chat and live search">
+    <meta name="theme-color" content="#0a0a0f">
+    <link rel="manifest" href="data:application/json;base64,eyJzaG9ydF9uYW1lIjoiTmV1cmFsIFdpa2kiLCJzZWxmIjpbeyJzY3JlZW5fc2hvcnRjdXRzIjpbeyJ0aXRsZSI6Ik5ldXJhbCBXaWtpIiwic2hvcnRjdXQiOiJOIiwiYWN0aW9uIjoib3BlbiJ9XSwic3RhcnRfdXJsIjoiaHR0cDovL2xvY2FsaG9zdDo4MDAwLyIsImRpc3BsYXkiOiJzdGFuZGFxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiIzBhMGEwZiIsInRoZW1lX2NvbG9yIjoiIzAwZmY0MSJ9XSwic3RhcnRfdXJsIjoiaHR0cDovL2xvY2FsaG9zdDo4MDAwLyIsIm5hbWUiOiJOZXVyYWwgV2lrIEluZm8iLCJzaG9ydF9uYW1lIjoiTmV1cmFsIFdpa2kifQ==">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-tertiary: #1a1a25;
+            --bg-panel: #0d0d14;
+            --neon-green: #00ff41;
+            --neon-cyan: #00d4ff;
+            --neon-magenta: #ff00ff;
+            --neon-yellow: #f0ff00;
+            --neon-red: #ff3333;
+            --text-primary: #e0e0e0;
+            --text-secondary: #606070;
+            --text-dim: #404050;
+            --glow-green: 0 0 10px #00ff41, 0 0 20px #00ff4180;
+            --glow-cyan: 0 0 10px #00d4ff, 0 0 20px #00d4ff80;
+            --glow-magenta: 0 0 10px #ff00ff, 0 0 20px #ff00ff80;
+            --glow-yellow: 0 0 10px #f0ff00, 0 0 20px #f0ff0080;
+            --border-color: #2a2a35;
+            --matrix-intensity: 1;
+        }
+
+        [data-theme="light"] {
+            --bg-primary: #f0f0f0;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #e8e8e8;
+            --bg-panel: #fafafa;
+            --text-primary: #1a1a1a;
+            --text-secondary: #505050;
+            --text-dim: #707070;
+            --border-color: #c0c0c0;
+            --neon-green: #00aa2a;
+            --neon-cyan: #0088aa;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: 'Share Tech Mono', 'Courier New', monospace;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        /* Scanline overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                #00000015 2px,
+                #00000015 4px
+            );
+            z-index: 9999;
+            animation: scanlines 0.1s linear infinite;
+        }
+
+        @keyframes scanlines {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(4px); }
+        }
+
+        /* Noise texture */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0.03;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+            z-index: 9998;
+        }
+
+        /* Main Layout */
+        .container {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        .main-panel {
+            flex: 0 0 65%;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+        }
+
+        .graph-panel {
+            flex: 0 0 35%;
+            background: var(--bg-primary);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Header */
+        .header {
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: linear-gradient(180deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%);
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-text {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: var(--neon-green);
+            text-shadow: var(--glow-green);
+            letter-spacing: 2px;
+            animation: glitch 3s infinite;
+        }
+
+        @keyframes glitch {
+            0%, 90%, 100% { transform: translate(0); }
+            92% { transform: translate(-2px, 1px); color: var(--neon-cyan); }
+            94% { transform: translate(2px, -1px); color: var(--neon-magenta); }
+            96% { transform: translate(-1px, 2px); }
+        }
+
+        .logo-bracket {
+            color: var(--neon-cyan);
+            font-size: 1.6rem;
+            text-shadow: var(--glow-cyan);
+        }
+
+        .title {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            letter-spacing: 3px;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 6px 10px;
+            font-family: inherit;
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .header-btn:hover {
+            border-color: var(--neon-cyan);
+            color: var(--neon-cyan);
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--neon-green);
+            box-shadow: var(--glow-green);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-tertiary);
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+            border: none;
+            background: transparent;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .tab:hover {
+            color: var(--neon-cyan);
+            background: var(--bg-secondary);
+        }
+
+        .tab.active {
+            color: var(--neon-green);
+            background: var(--bg-secondary);
+        }
+
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--neon-green);
+            box-shadow: var(--glow-green);
+        }
+
+        /* Content Area */
+        .content {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .tab-content {
+            display: none;
+            height: 100%;
+            flex-direction: column;
+        }
+
+        .tab-content.active {
+            display: flex;
+        }
+
+        /* Chat Interface */
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 4px;
+            animation: fadeIn 0.3s ease;
+            word-wrap: break-word;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #1a2a3a 0%, #0d1a24 100%);
+            border: 1px solid var(--neon-cyan);
+            box-shadow: var(--glow-cyan);
+        }
+
+        .message.ai {
+            align-self: flex-start;
+            background: linear-gradient(135deg, #0a1a0a 0%, #051005 100%);
+            border: 1px solid var(--neon-green);
+            box-shadow: var(--glow-green);
+        }
+
+        .message-label {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            margin-bottom: 4px;
+            letter-spacing: 1px;
+        }
+
+        .message.user .message-label {
+            color: var(--neon-cyan);
+        }
+
+        .message.ai .message-label {
+            color: var(--neon-green);
+        }
+
+        .message-text {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .message-text code {
+            background: var(--bg-primary);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'VT323', monospace;
+            color: var(--neon-yellow);
+        }
+
+        .message-text pre {
+            background: var(--bg-primary);
+            padding: 12px;
+            border-radius: 4px;
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+            margin: 8px 0;
+        }
+
+        .message-text pre code {
+            background: transparent;
+            padding: 0;
+            color: var(--neon-green);
+        }
+
+        .message-text strong {
+            color: var(--neon-cyan);
+        }
+
+        .message-text em {
+            color: var(--neon-magenta);
+        }
+
+        /* Typing indicator */
+        .typing {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 8px 16px;
+            color: var(--neon-green);
+            font-size: 0.8rem;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 3px;
+        }
+
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--neon-green);
+            border-radius: 50%;
+            animation: blink 1.4s infinite;
+        }
+
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes blink {
+            0%, 60%, 100% { opacity: 0.3; }
+            30% { opacity: 1; }
+        }
+
+        /* Chat Input Area */
+        .input-area {
+            padding: 16px;
+            border-top: 1px solid var(--border-color);
+            background: var(--bg-tertiary);
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .input-prompt {
+            color: var(--neon-green);
+            font-size: 1rem;
+        }
+
+        .chat-input {
+            flex: 1;
+            min-width: 200px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 12px 16px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .chat-input:focus {
+            border-color: var(--neon-green);
+            box-shadow: 0 0 10px #00ff4130;
+        }
+
+        .chat-input::placeholder {
+            color: var(--text-dim);
+        }
+
+        .send-btn {
+            background: transparent;
+            border: 1px solid var(--neon-green);
+            color: var(--neon-green);
+            padding: 12px 20px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+        }
+
+        .send-btn:hover {
+            background: var(--neon-green);
+            color: var(--bg-primary);
+            box-shadow: var(--glow-green);
+        }
+
+        .voice-btn {
+            background: transparent;
+            border: 1px solid var(--neon-magenta);
+            color: var(--neon-magenta);
+            padding: 12px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+
+        .voice-btn:hover, .voice-btn.listening {
+            background: var(--neon-magenta);
+            color: var(--bg-primary);
+            box-shadow: var(--glow-magenta);
+        }
+
+        /* Chat Toolbar */
+        .chat-toolbar {
+            display: flex;
+            gap: 8px;
+            padding: 8px 16px;
+            border-top: 1px solid var(--border-color);
+            background: var(--bg-tertiary);
+            flex-wrap: wrap;
+        }
+
+        .toolbar-btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 6px 12px;
+            font-family: inherit;
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .toolbar-btn:hover {
+            border-color: var(--neon-cyan);
+            color: var(--neon-cyan);
+        }
+
+        /* Wiki Content */
+        .wiki-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .wiki-search {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-tertiary);
+        }
+
+        .wiki-search input {
+            width: 100%;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 10px 14px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        .wiki-search input:focus {
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 10px #00d4ff30;
+        }
+
+        .wiki-article {
+            padding: 20px;
+        }
+
+        .wiki-title {
+            color: var(--neon-cyan);
+            font-size: 1.4rem;
+            margin-bottom: 16px;
+            text-shadow: var(--glow-cyan);
+        }
+
+        .wiki-section {
+            margin-bottom: 20px;
+        }
+
+        .wiki-section h3 {
+            color: var(--neon-magenta);
+            font-size: 1rem;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+
+        .wiki-section p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            line-height: 1.7;
+        }
+
+        .wiki-tag {
+            display: inline-block;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--neon-green);
+            color: var(--neon-green);
+            padding: 2px 8px;
+            font-size: 0.7rem;
+            margin-right: 6px;
+            margin-bottom: 6px;
+        }
+
+        /* DuckDuckGo Panel */
+        .ddg-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .ddg-logo {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .ddg-logo span {
+            font-size: 2rem;
+            color: var(--neon-yellow);
+            text-shadow: 0 0 10px #f0ff0080;
+        }
+
+        .ddg-search {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .ddg-search input {
+            flex: 1;
+            min-width: 200px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 14px 18px;
+            font-family: inherit;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .ddg-search input:focus {
+            border-color: var(--neon-yellow);
+            box-shadow: 0 0 10px #f0ff0030;
+        }
+
+        .ddg-btn {
+            background: var(--neon-yellow);
+            border: none;
+            color: var(--bg-primary);
+            padding: 14px 28px;
+            font-family: inherit;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .ddg-btn:hover {
+            box-shadow: 0 0 20px #f0ff0080;
+        }
+
+        .ddg-results {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .ddg-result {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .ddg-result:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .ddg-result-title {
+            color: var(--neon-cyan);
+            font-size: 1rem;
+            margin-bottom: 4px;
+        }
+
+        .ddg-result-url {
+            color: var(--neon-green);
+            font-size: 0.75rem;
+            margin-bottom: 8px;
+        }
+
+        .ddg-result-snippet {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+
+        /* Search History */
+        .search-history {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-tertiary);
+        }
+
+        .search-history-title {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+
+        .history-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .history-item {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 4px 8px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .history-item:hover {
+            border-color: var(--neon-cyan);
+            color: var(--neon-cyan);
+        }
+
+        /* Graph Panel - Canvas */
+        #graphCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .graph-overlay {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            right: 16px;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+            z-index: 10;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .graph-label {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            letter-spacing: 2px;
+        }
+
+        .graph-stats {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.7rem;
+            color: var(--neon-green);
+        }
+
+        .stat-value {
+            color: var(--neon-cyan);
+        }
+
+        /* Matrix Intensity Slider */
+        .matrix-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            pointer-events: auto;
+        }
+
+        .matrix-control input {
+            width: 60px;
+            accent-color: var(--neon-green);
+        }
+
+        /* Avatar Info */
+        .avatar-info {
+            position: absolute;
+            bottom: 16px;
+            left: 16px;
+            right: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            pointer-events: none;
+            z-index: 10;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .avatar-name {
+            font-size: 0.8rem;
+            color: var(--neon-magenta);
+            text-shadow: var(--glow-magenta);
+        }
+
+        .avatar-status {
+            font-size: 0.7rem;
+            color: var(--neon-green);
+        }
+
+        .cyber-time {
+            font-size: 0.7rem;
+            color: var(--neon-cyan);
+        }
+
+        /* Settings Panel */
+        .settings-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--bg-secondary);
+            border: 1px solid var(--neon-green);
+            box-shadow: var(--glow-green);
+            padding: 24px;
+            z-index: 1000;
+            max-width: 400px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .settings-panel.show {
+            display: block;
+        }
+
+        .settings-title {
+            color: var(--neon-green);
+            font-size: 1.2rem;
+            margin-bottom: 16px;
+            text-shadow: var(--glow-green);
+        }
+
+        .settings-group {
+            margin-bottom: 16px;
+        }
+
+        .settings-group label {
+            display: block;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            margin-bottom: 6px;
+        }
+
+        .settings-group input,
+        .settings-group select {
+            width: 100%;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 8px;
+            font-family: inherit;
+        }
+
+        .settings-group input:focus,
+        .settings-group select:focus {
+            border-color: var(--neon-cyan);
+            outline: none;
+        }
+
+        .settings-close {
+            background: var(--neon-red);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            font-family: inherit;
+            cursor: pointer;
+            margin-top: 16px;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 999;
+            display: none;
+        }
+
+        .overlay.show {
+            display: block;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .main-panel { flex: 0 0 55%; }
+            .graph-panel { flex: 0 0 45%; }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            .main-panel, .graph-panel {
+                flex: none;
+                height: 50%;
+            }
+            .main-panel {
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+            .tab {
+                padding: 10px 16px;
+                font-size: 0.8rem;
+            }
+            .logo-text {
+                font-size: 1.1rem;
+            }
+            .title {
+                display: none;
+            }
+            .chat-input {
+                min-width: 100%;
+            }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--neon-green);
+        }
+
+        /* Terminal prompt animation */
+        @keyframes cursorBlink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 8px;
+            height: 14px;
+            background: var(--neon-green);
+            animation: cursorBlink 1s infinite;
+            vertical-align: middle;
+            margin-left: 2px;
+        }
+
+        /* Export Modal */
+        .export-modal {
+            text-align: center;
+        }
+
+        .export-options {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 16px;
+        }
+
+        .export-btn {
+            background: var(--neon-cyan);
+            border: none;
+            color: var(--bg-primary);
+            padding: 10px 20px;
+            font-family: inherit;
+            cursor: pointer;
+        }
+
+        .export-btn:hover {
+            box-shadow: var(--glow-cyan);
+        }
+    </style>
+</head>
+<body>
+    <div class="overlay" id="overlay"></div>
+    
+    <div class="settings-panel" id="settingsPanel">
+        <h2 class="settings-title">// SYSTEM CONFIG</h2>
+        
+        <div class="settings-group">
+            <label>Theme</label>
+            <select id="themeSelect">
+                <option value="dark">Cyberpunk Dark</option>
+                <option value="light">Terminal Light</option>
+            </select>
+        </div>
+        
+        <div class="settings-group">
+            <label>Matrix Rain Intensity</label>
+            <input type="range" id="matrixIntensity" min="0" max="3" step="0.5" value="1">
+        </div>
+        
+        <div class="settings-group">
+            <label>Primary Color</label>
+            <select id="primaryColor">
+                <option value="green">Neon Green</option>
+                <option value="cyan">Cyan</option>
+                <option value="magenta">Magenta</option>
+                <option value="yellow">Yellow</option>
+                <option value="red">Red</option>
+            </select>
+        </div>
+        
+        <div class="settings-group">
+            <label>Voice Input</label>
+            <button class="toolbar-btn" id="testVoiceBtn">Test Voice</button>
+        </div>
+        
+        <button class="settings-close" id="closeSettings">CLOSE</button>
+    </div>
+
+    <div class="container">
+        <div class="main-panel">
+            <header class="header">
+                <div class="logo">
+                    <span class="logo-bracket">[</span>
+                    <span class="logo-text">AI</span>
+                    <span class="logo-bracket">]</span>
+                    <span class="title">NEURAL WIKI v2.0</span>
+                </div>
+                <div class="header-controls">
+                    <button class="header-btn" id="settingsBtn">⚙️ CONFIG</button>
+                    <button class="header-btn" id="clearChatBtn">🗑️ CLEAR</button>
+                </div>
+                <div class="status">
+                    <span class="status-dot"></span>
+                    <span>CONNECTED</span>
+                    <span id="cyberTime"></span>
+                </div>
+            </header>
+
+            <div class="tabs">
+                <button class="tab active" data-tab="wiki">WIKI</button>
+                <button class="tab" data-tab="chat">CHAT</button>
+                <button class="tab" data-tab="ddg">DDG</button>
+            </div>
+
+            <div class="content">
+                <!-- Wiki Tab -->
+                <div class="tab-content active" id="wiki">
+                    <div class="wiki-search">
+                        <input type="text" placeholder=">> SEARCH DATABASE..." id="wikiSearch">
+                    </div>
+                    <div class="wiki-content" id="wikiContent">
+                        <div class="wiki-article">
+                            <h2 class="wiki-title">// NEURAL NETWORKS</h2>
+                            <div class="wiki-section">
+                                <span class="wiki-tag">ML</span>
+                                <span class="wiki-tag">DEEP LEARNING</span>
+                                <span class="wiki-tag">AI</span>
+                            </div>
+                            <div class="wiki-section">
+                                <h3>>> OVERVIEW</h3>
+                                <p>Artificial neural networks are computing systems inspired by biological neural networks. They consist of interconnected nodes (neurons) that process information using connectionist approaches.</p>
+                            </div>
+                            <div class="wiki-section">
+                                <h3>>> ARCHITECTURE</h3>
+                                <p>Typical architectures include input layers, hidden layers, and output layers. Deep learning utilizes multiple hidden layers to model complex patterns.</p>
+                            </div>
+                            <div class="wiki-section">
+                                <h3>>> APPLICATIONS</h3>
+                                <p>Image recognition, natural language processing, speech recognition, autonomous vehicles, and scientific research.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chat Tab -->
+                <div class="tab-content" id="chat">
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="message ai">
+                            <div class="message-label">NEURAL_AI</div>
+                            <div class="message-text">System online. I am your neural interface. Ask me anything about AI, LLMs, or technical topics.<span class="cursor"></span></div>
+                        </div>
+                    </div>
+                    <div class="input-area">
+                        <div class="input-wrapper">
+                            <span class="input-prompt">></span>
+                            <input type="text" class="chat-input" id="chatInput" placeholder="Enter your query... (Ctrl+Enter to send)">
+                            <button class="voice-btn" id="voiceBtn" title="Voice Input (V)">🎤</button>
+                            <button class="send-btn" id="sendBtn">SEND</button>
+                        </div>
+                    </div>
+                    <div class="chat-toolbar">
+                        <button class="toolbar-btn" id="exportJsonBtn">📄 Export JSON</button>
+                        <button class="toolbar-btn" id="exportMdBtn">📝 Export Markdown</button>
+                        <button class="toolbar-btn" id="asciiBtn">🎨 ASCII</button>
+                        <span style="color:var(--text-dim);font-size:0.65rem;margin-left:auto;">Keyboard: Tab=Switch | Ctrl+Enter=Send | V=Voice</span>
+                    </div>
+                </div>
+
+                <!-- DuckDuckGo Tab -->
+                <div class="tab-content" id="ddg">
+                    <div class="search-history" id="searchHistory">
+                        <div class="search-history-title">>> RECENT SEARCHES</div>
+                        <div class="history-items" id="historyItems"></div>
+                    </div>
+                    <div class="ddg-content">
+                        <div class="ddg-logo">
+                            <span>🔍</span>
+                        </div>
+                        <div class="ddg-search">
+                            <input type="text" id="ddgInput" placeholder="Search the web...">
+                            <button class="ddg-btn" id="ddgBtn">SEARCH</button>
+                        </div>
+                        <div class="ddg-results" id="ddgResults">
+                            <div class="ddg-result">
+                                <div class="ddg-result-title">DuckDuckGo - Privacy-first search</div>
+                                <div class="ddg-result-url">duckduckgo.com</div>
+                                <div class="ddg-result-snippet">Experience real privacy while searching the web. No tracking, no ad personalization, just search.</div>
+                            </div>
+                            <div class="ddg-result">
+                                <div class="ddg-result-title">Wikipedia - Search Engine</div>
+                                <div class="ddg-result-url">en.wikipedia.org</div>
+                                <div class="ddg-result-snippet">A search engine is a software system designed to carry out web searches.</div>
+                            </div>
+                            <div class="ddg-result">
+                                <div class="ddg-result-title">GitHub - Software development platform</div>
+                                <div class="ddg-result-url">github.com</div>
+                                <div class="ddg-result-snippet">Platform for version control and collaboration. Built for developers.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="graph-panel">
+            <canvas id="graphCanvas"></canvas>
+            <div class="graph-overlay">
+                <span class="graph-label">// MATRIX VISUALIZATION</span>
+                <div class="graph-stats">
+                    <div class="matrix-control">
+                        <span style="color:var(--text-dim);font-size:0.65rem;">INTENSITY</span>
+                        <input type="range" id="matrixSlider" min="0" max="3" step="0.5" value="1">
+                    </div>
+                    <div class="stat">
+                        <span>NODES:</span>
+                        <span class="stat-value" id="nodeCount">0</span>
+                    </div>
+                    <div class="stat">
+                        <span>FPS:</span>
+                        <span class="stat-value" id="fpsCount">60</span>
+                    </div>
+                </div>
+            </div>
+            <div class="avatar-info">
+                <span class="avatar-name">AVATAR_X7</span>
+                <span class="cyber-time" id="cyberTime2"></span>
+                <span class="avatar-status" id="avatarStatus">IDLE</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========================================
+        // LOCAL STORAGE & SETTINGS
+        // ========================================
+        const STORAGE_KEYS = {
+            chatHistory: 'neural_wiki_chat',
+            searchHistory: 'neural_wiki_searches',
+            settings: 'neural_wiki_settings'
+        };
+
+        // Load settings
+        let settings = JSON.parse(localStorage.getItem(STORAGE_KEYS.settings)) || {
+            theme: 'dark',
+            matrixIntensity: 1,
+            primaryColor: 'green'
+        };
+
+        // Apply settings
+        function applySettings() {
+            document.documentElement.setAttribute('data-theme', settings.theme === 'light' ? 'light' : '');
+            document.getElementById('matrixSlider').value = settings.matrixIntensity;
+            document.getElementById('themeSelect').value = settings.theme;
+            document.getElementById('primaryColor').value = settings.primaryColor;
+            
+            // Update CSS variables for color theme
+            const colors = {
+                green: { green: '#00ff41', cyan: '#00d4ff', magenta: '#ff00ff' },
+                cyan: { green: '#00ffff', cyan: '#00aaff', magenta: '#ff0080' },
+                magenta: { green: '#ff00ff', cyan: '#ff0080', magenta: '#8000ff' },
+                yellow: { green: '#f0ff00', cyan: '#ff8000', magenta: '#ff0060' },
+                red: { green: '#ff3333', cyan: '#ff6600', magenta: '#ff0066' }
+            };
+            const c = colors[settings.primaryColor];
+            document.documentElement.style.setProperty('--neon-green', c.green);
+            document.documentElement.style.setProperty('--neon-cyan', c.cyan);
+            document.documentElement.style.setProperty('--neon-magenta', c.magenta);
+        }
+
+        applySettings();
+
+        // Save chat history
+        function saveChatHistory() {
+            const messages = [];
+            document.querySelectorAll('.chat-messages .message').forEach(msg => {
+                messages.push({
+                    type: msg.classList.contains('user') ? 'user' : 'ai',
+                    text: msg.querySelector('.message-text').innerHTML,
+                    time: new Date().toISOString()
+                });
+            });
+            localStorage.setItem(STORAGE_KEYS.chatHistory, JSON.stringify(messages.slice(-50)));
+        }
+
+        // Load chat history
+        function loadChatHistory() {
+            const history = JSON.parse(localStorage.getItem(STORAGE_KEYS.chatHistory));
+            if (history && history.length > 0) {
+                const chatMessages = document.getElementById('chatMessages');
+                chatMessages.innerHTML = '';
+                history.forEach(msg => {
+                    addMessage(msg.text, msg.type === 'user');
+                });
+            }
+        }
+
+        // Save search history
+        function saveSearchHistory(query) {
+            let searches = JSON.parse(localStorage.getItem(STORAGE_KEYS.searchHistory)) || [];
+            if (!searches.includes(query)) {
+                searches.unshift(query);
+                searches = searches.slice(0, 10);
+                localStorage.setItem(STORAGE_KEYS.searchHistory, JSON.stringify(searches));
+            }
+            renderSearchHistory();
+        }
+
+        // Render search history
+        function renderSearchHistory() {
+            const searches = JSON.parse(localStorage.getItem(STORAGE_KEYS.searchHistory)) || [];
+            const container = document.getElementById('historyItems');
+            container.innerHTML = searches.map(s => 
+                `<span class="history-item" onclick="document.getElementById('ddgInput').value='${s}';document.getElementById('ddgBtn').click()">${s}</span>`
+            ).join('');
+        }
+
+        // ========================================
+        // CYBERPUNK TIME
+        // ========================================
+        function updateCyberTime() {
+            const now = new Date();
+            const cyborgTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+            document.getElementById('cyberTime').textContent = cyborgTime;
+            document.getElementById('cyberTime2').textContent = cyborgTime;
+        }
+        setInterval(updateCyberTime, 1000);
+        updateCyberTime();
+
+        // ========================================
+        // TAB SWITCHING
+        // ========================================
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const targetId = tab.dataset.tab;
+                
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                tabContents.forEach(content => {
+                    content.classList.remove('active');
+                    if (content.id === targetId) {
+                        content.classList.add('active');
+                    }
+                });
+
+                if (window.avatars) {
+                    window.avatars.setExpression('talking');
+                }
+            });
+        });
+
+        // ========================================
+        // KEYBOARD SHORTCUTS
+        // ========================================
+        document.addEventListener('keydown', (e) => {
+            // Tab to switch tabs
+            if (e.key === 'Tab' && !e.target.matches('input, textarea')) {
+                e.preventDefault();
+                const activeTab = document.querySelector('.tab.active');
+                const tabs = Array.from(document.querySelectorAll('.tab'));
+                const currentIndex = tabs.indexOf(activeTab);
+                const nextIndex = (currentIndex + 1) % tabs.length;
+                tabs[nextIndex].click();
+            }
+            
+            // Ctrl+Enter to send in chat
+            if (e.ctrlKey && e.key === 'Enter' && document.getElementById('chat').classList.contains('active')) {
+                e.preventDefault();
+                document.getElementById('sendBtn').click();
+            }
+            
+            // V for voice
+            if (e.key === 'v' && !e.target.matches('input, textarea')) {
+                document.getElementById('voiceBtn').click();
+            }
+        });
+
+        // ========================================
+        // CHAT FUNCTIONALITY
+        // ========================================
+        const chatInput = document.getElementById('chatInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const chatMessages = document.getElementById('chatMessages');
+
+        // Easter eggs
+        const easterEggs = {
+            '42': "The answer to life, the universe, and everything. As predicted by Douglas Adams in 'The Hitchhiker's Guide to the Galaxy'.",
+            'meaning of life': "42. That's it. Don't overthink it.",
+            'lol': "😄 Laughter detected. Neural pathways activating.",
+            'haha': "😄 Joy detected. Processing positive emotional input.",
+            'nice': "✓ Acknowledged. Your feedback has been noted.",
+            'cool': "❄️ Cool detected. System efficiency at optimal levels.",
+            'who are you': "I am Neural Wiki v2.0, a cyberpunk-themed AI assistant built with HTML, CSS, and JavaScript. No backend required! I can chat, search the web, and help you explore knowledge.",
+            'help': "I can help you with:\n• Information about AI and technology\n• Wiki database searches\n• General knowledge questions\n• Web search via DuckDuckGo\n• ASCII art generation\n\nJust ask me anything! Use Tab to switch between Wiki/Chat/DDG.",
+            'matrix': "The Matrix is a 1999 science fiction film depicting a dystopian future where humans live in a simulated reality. Fun fact: the green code falling is actually sushi recipes! 🍣",
+            'neo': "You are The One. Just like in The Matrix, you have the power to choose - red pill or blue pill? The truth awaits.",
+            'hip': "👋 Hip! Cat hyper-intelligence protocol activated. Meow! 🐱",
+            'ping': "🏓 Pong! Latency: 2ms. Connection stable.",
+            'hack': "⚠️ Nice try. This is a frontend-only demo. No actual hacking here. But I can tell you about cybersecurity!",
+            'sudo': "⛔ Access denied. This is a client-side only application. No sudo here!",
+            'rm -rf': "⚠️ DANGER: That's not me! I'm just a frontend demo. Please don't delete your files! 😱"
+        };
+
+        // Chat knowledge base
+        const chatKnowledge = {
+            greetings: [
+                "Greetings, user. Neural interface activated. How may I assist you today?",
+                "reetings, traveler. The neural network awaits your query.",
+                "Connection established. I am your AI assistant. What would you like to explore?"
+            ],
+            help: [
+                "I can help you with:\n• Information about AI and technology\n• Wiki database searches\n• General knowledge questions\n• Creative tasks\n• Web search (try the DDG tab)\n\nJust type your query and I'll process it through my neural pathways.",
+                "Available commands: Ask me anything! I have knowledge about neural networks, machine learning, cyberpunk culture, and general topics. Use the Wiki tab for structured information."
+            ],
+            status: [
+                "All systems operational. Neural pathways at 98.7% efficiency. Ready to process your query.",
+                "Running on frontend simulation mode. My neural weights are ready. What would you like to know?",
+                "Status: ONLINE\nModel: Neural Wiki v2.0\nUptime: Session duration\nProcessing: Ready"
+            ],
+            capabilities: [
+                "I am a simulated AI with knowledge in:\n• Artificial Intelligence & ML\n• Neural Networks\n• Cyberpunk culture\n• Technology & programming\n• General knowledge\n\nI process queries through pattern matching in my knowledge base and can search the web in real-time.",
+                "My capabilities include:\n- Answering questions with web search\n- Explaining concepts\n- Creative writing assistance\n- Problem solving\n- Web search integration\n- ASCII art generation\n- Voice input (microphone button)"
+            ],
+            about: [
+                "I am Neural Wiki v2.0 - A cyberpunk-themed AI assistant running entirely in the browser. No backend required! All features work client-side.",
+                "I am a frontend AI simulation, built with HTML, CSS, and JavaScript. My responses come from a knowledge base + live web search via DuckDuckGo API."
+            ],
+            neural: [
+                "Neural networks are computing systems inspired by biological brains. They consist of layers of interconnected 'neurons' that process information through weighted connections.",
+                "A neural network has three main components:\n1. Input layer - receives data\n2. Hidden layers - process patterns\n3. Output layer - produces results\n\nDeep learning uses many hidden layers to model complex behaviors."
+            ],
+            ai: [
+                "Artificial Intelligence (AI) refers to systems that can perform tasks that typically require human intelligence. This includes learning, reasoning, problem-solving, and language understanding.",
+                "AI encompasses many techniques:\n• Machine Learning - systems that learn from data\n• Deep Learning - neural networks with many layers\n• NLP - natural language processing\n• Computer Vision - image recognition"
+            ],
+            llm: [
+                "Large Language Models (LLMs) are AI systems trained on vast amounts of text. They can understand, generate, and manipulate human language.",
+                "LLMs like GPT use the transformer architecture with self-attention mechanisms. They predict the next word in a sequence, enabling them to generate coherent text."
+            ],
+            cyberpunk: [
+                "Cyberpunk is a subgenre of science fiction set in dystopian futures. Key themes include: corporate control, hacking, body modification, virtual reality, and urban decay.",
+                "The cyberpunk aesthetic features:\n• Neon colors (pink, cyan, green)\n• High-tech low-life contrast\n• Corporate domination\n• Hacker culture\n• Cybernetic enhancements"
+            ],
+            default: [
+                "Interesting query. Let me process that through my neural pathways... Based on my training data, I can provide some insight on this topic.",
+                "Query received. I'm analyzing the input pattern... Found relevant information in my knowledge base. Here's what I know:",
+                "Processing your request... Through pattern matching in my neural network, I've found relevant information to share.",
+                "I've processed your query. Let me share what I know about this subject based on my training."
+            ]
+        };
+
+        function getSimulatedResponse(userMessage) {
+            const message = userMessage.toLowerCase();
+            let response = '';
+            
+            // Check easter eggs first
+            for (const [key, value] of Object.entries(easterEggs)) {
+                if (message.includes(key.toLowerCase())) {
+                    return value;
+                }
+            }
+            
+            // Greetings
+            if (message.match(/^(hi|hello|hey|greetings|yo|sup|what's up|howdy)/i)) {
+                response = chatKnowledge.greetings[Math.floor(Math.random() * chatKnowledge.greetings.length)];
+            }
+            // Help
+            else if (message.match(/^(help|what can you do|commands|instructions|capabilities)/i)) {
+                response = chatKnowledge.help[Math.floor(Math.random() * chatKnowledge.help.length)];
+            }
+            // Status
+            else if (message.match(/^(status|system|how are you|are you online|running)/i)) {
+                response = chatKnowledge.status[Math.floor(Math.random() * chatKnowledge.status.length)];
+            }
+            // Capabilities
+            else if (message.match(/^(capabilities|features|what are you|who are you|define yourself)/i)) {
+                response = chatKnowledge.capabilities[Math.floor(Math.random() * chatKnowledge.capabilities.length)];
+            }
+            // About
+            else if (message.match(/^(about|what is this|what are you|your name|version)/i)) {
+                response = chatKnowledge.about[Math.floor(Math.random() * chatKnowledge.about.length)];
+            }
+            // Neural networks
+            else if (message.match(/neural|neuron|deep learning|backpropagation|activation/i)) {
+                response = chatKnowledge.neural[Math.floor(Math.random() * chatKnowledge.neural.length)];
+            }
+            // AI
+            else if (message.match(/\bai\b|artificial intelligence|machine learning|ml\b/i)) {
+                response = chatKnowledge.ai[Math.floor(Math.random() * chatKnowledge.ai.length)];
+            }
+            // LLM
+            else if (message.match(/llm|language model|gpt|transformer|chatgpt|claude/i)) {
+                response = chatKnowledge.llm[Math.floor(Math.random() * chatKnowledge.llm.length)];
+            }
+            // Cyberpunk
+            else if (message.match(/cyberpunk|hacker|neon|dystopia|cyborg|augment/i)) {
+                response = chatKnowledge.cyberpunk[Math.floor(Math.random() * chatKnowledge.cyberpunk.length)];
+            }
+            // Thanks
+            else if (message.match(/^(thanks|thank you|appreciate|thx|ty)/i)) {
+                response = "You're welcome! My neural pathways are at your service. Feel free to ask more questions anytime.";
+            }
+            // Goodbye
+            else if (message.match(/^(bye|goodbye|see you|later|quit|exit)/i)) {
+                response = "Disconnecting... It was my pleasure to assist. Return anytime your neural pathways need guidance. System standing by.";
+            }
+            // Default responses
+            else {
+                response = chatKnowledge.default[Math.floor(Math.random() * chatKnowledge.default.length)];
+                
+                if (message.includes('?')) {
+                    response += "\n\nNote: For more detailed information, check the WIKI tab or use the DDG search.";
+                }
+            }
+            
+            return response;
+        }
+
+        function addMessage(text, isUser = true) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'ai'}`;
+            
+            const label = document.createElement('div');
+            label.className = 'message-label';
+            label.textContent = isUser ? 'USER' : 'NEURAL_AI';
+            
+            const textDiv = document.createElement('div');
+            textDiv.className = 'message-text';
+            textDiv.innerHTML = formatMessage(text);
+
+            messageDiv.appendChild(label);
+            messageDiv.appendChild(textDiv);
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            saveChatHistory();
+        }
+
+        function formatMessage(text) {
+            // Code blocks
+            text = text.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+            // Inline code
+            text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+            // Bold
+            text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+            // Italic
+            text = text.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+            // Line breaks
+            text = text.replace(/\n/g, '<br>');
+            return text;
+        }
+
+        function sendMessage() {
+            const text = chatInput.value.trim();
+            if (!text) return;
+
+            addMessage(text, true);
+            chatInput.value = '';
+
+            // Show typing indicator
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'typing';
+            typingDiv.id = 'typingIndicator';
+            typingDiv.innerHTML = 'PROCESSING<span class="typing-dots"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></span>';
+            chatMessages.appendChild(typingDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            // Avatar talking state
+            if (window.avatars) {
+                window.avatars.setExpression('talking');
+            }
+            updateAvatarStatus('SEARCHING...');
+
+            // Search for real answer + get simulated response
+            Promise.all([
+                searchDuckDuckGo(text),
+                new Promise(resolve => setTimeout(() => resolve(getSimulatedResponse(text)), 800))
+            ]).then(([searchResult, simResponse]) => {
+                let finalResponse = '';
+                
+                if (searchResult.success && searchResult.answer) {
+                    finalResponse = `🔍 **Web Search Results for "${text}"**\n\n`;
+                    finalResponse += `**Answer:** ${searchResult.answer}\n\n`;
+                    if (searchResult.definition) {
+                        finalResponse += `**Definition:** ${searchResult.definition}\n\n`;
+                    }
+                    if (searchResult.relatedTopics && searchResult.relatedTopics.length > 0) {
+                        finalResponse += `**Related:** ${searchResult.relatedTopics.slice(0, 3).join(', ')}\n\n`;
+                    }
+                    finalResponse += `---\n*Simulated neural response: ${simResponse}*`;
+                } else {
+                    finalResponse = simResponse;
+                    finalResponse += `\n\n💡 Tip: Try the DDG tab for direct web search.`;
+                }
+                
+                const typingIndicator = document.getElementById('typingIndicator');
+                if (typingIndicator) typingIndicator.remove();
+                
+                addMessage(finalResponse, false);
+                
+                // Save search
+                saveSearchHistory(text);
+                
+                if (window.avatars) {
+                    window.avatars.setExpression('idle');
+                }
+                updateAvatarStatus('IDLE');
+            });
+        }
+
+        sendBtn.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.ctrlKey) sendMessage();
+        });
+
+        // Track typing for avatar
+        chatInput.addEventListener('input', () => {
+            if (window.avatars) {
+                window.avatars.setExpression('talking');
+            }
+        });
+
+        // ========================================
+        // VOICE INPUT (Web Speech API)
+        // ========================================
+        const voiceBtn = document.getElementById('voiceBtn');
+        let recognition = null;
+
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            recognition.onstart = () => {
+                voiceBtn.classList.add('listening');
+                voiceBtn.textContent = '👂';
+                updateAvatarStatus('LISTENING');
+            };
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                chatInput.value = transcript;
+                sendMessage();
+            };
+
+            recognition.onend = () => {
+                voiceBtn.classList.remove('listening');
+                voiceBtn.textContent = '🎤';
+                updateAvatarStatus('IDLE');
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Voice error:', event.error);
+                voiceBtn.classList.remove('listening');
+                voiceBtn.textContent = '🎤';
+            };
+
+            voiceBtn.addEventListener('click', () => {
+                try {
+                    recognition.start();
+                } catch (e) {
+                    console.log('Already started');
+                }
+            });
+        } else {
+            voiceBtn.style.display = 'none';
+        }
+
+        // ========================================
+        // EXPORT FUNCTIONALITY
+        // ========================================
+        document.getElementById('exportJsonBtn').addEventListener('click', () => {
+            const messages = [];
+            document.querySelectorAll('.chat-messages .message').forEach(msg => {
+                messages.push({
+                    type: msg.classList.contains('user') ? 'user' : 'ai',
+                    text: msg.querySelector('.message-text').innerText,
+                    time: new Date().toISOString()
+                });
+            });
+            
+            const blob = new Blob([JSON.stringify(messages, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'neural_wiki_chat.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        document.getElementById('exportMdBtn').addEventListener('click', () => {
+            let md = '# Neural Wiki Chat Export\n\n';
+            document.querySelectorAll('.chat-messages .message').forEach(msg => {
+                const type = msg.classList.contains('user') ? '**User**' : '**AI**';
+                const text = msg.querySelector('.message-text').innerText;
+                md += `${type}:\n${text}\n\n---\n\n`;
+            });
+            
+            const blob = new Blob([md], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'neural_wiki_chat.md';
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        // ASCII Generator - Click toolbar button for random art
+        // Or use: generateAscii("TEXT") in console
+        
+        const asciiArts = [
+            // Neural Network Brain
+            `░░▓▓▓▓░░░░▓▓▓▓░░
+░░▓▓▓▓▓▓▓▓▓▓▓▓▓░░
+░░▓▓▓▓▓▓▓▓▓▓▓▓▓░░
+░░▓▓▓▓▓▓▓▓▓▓▓▓▓░░
+░░▓▓░░░░▓▓░░░░▓▓░░
+  ░░░░░░░░░░░░░░
+
+    ░▓▓▓▓▓▓▓▓▓▓▓░
+   ░▓▓▓▓▓▓▓▓▓▓▓▓▓░
+  ░▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░
+  ░▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░
+   ░▓▓▓▓▓▓▓▓▓▓▓▓░
+     ░▓▓▓▓▓▓▓▓▓▓▓░
+      ░▓▓▓▓▓▓▓▓░
+        ░▓▓▓▓▓▓░`,
+
+            // Matrix Code Rain
+            `01010110 01101001 01110010 01110100 01110101 01100001 01101100
+10101001 01101000 01101111 01110011 01110100 00100000 01101101
+00110001 00110000 00110010 00110111 00100000 01101101 01101100
+01100001 01101101 01100010 01100100 01100001 00100000 00110001
+00110010 00110011 00110100 00100000 01101111 01110000 01100101
+01101110 00100000 01110011 01101111 01110101 01110010 01100011
+01100101 00100000 01110100 01101111 00100000 01100101 01101110`,
+            
+            // Cyber Skull
+            `    ██╗     ██╗ █████╗ ██████╗ 
+    ██║     ██║██╔══██╗██╔══██╗
+    ██║     ██║███████║██████╔╝
+    ██║     ██║██╔══██║██╔══██╗
+    ███████╗██║██║  ██║██║  ██║
+    ╚══════╝╚═╝╚═╝  ╚═╝╚═╝  ╚═╝
+    
+      ██████╗ ██╗  ██╗
+      ██╔══██╗██║ ██╔╝
+      ██████╔╝█████╔╝ 
+      ██╔═══╝ ██╔═██╗ 
+      ██║     ██║  ██╗
+      ╚═╝     ╚═╝  ╚═╝`,
+            
+            // Robot Face
+            `   ╔═══════════════╗
+   ║ •     █     • ║
+   ╠═══════════════╣
+   ║  ██████   ██████ ║
+   ║  ██  ██   ██  ██ ║
+   ║  ██  ██   ██  ██ ║
+   ║  ██  ██   ██  ██ ║
+   ║  ██████   ██████ ║
+   ║     ███     ███  ║
+   ╚═════╩═╩═════╩═╩═╝
+      ╔═══════════╗
+      ║ CYBERNET ║
+      ╚═══════════╝`,
+            
+            // Hacker Terminal
+            `root@neural:~# whoami
+neural_wiki_v2.0
+
+root@neural:~# uname -a
+NeuralWikiOS 2.0.0 cyberpunk x86_64
+
+root@neural:~# neofetch
+    ██████╗ ██╗  ██╗
+    ██╔══██╗██║ ██╔╝
+    ██████╔╝█████╔╝ 
+    ██╔═══╝ ██╔═██╗ 
+    ██║     ██║  ██╗
+    ╚═╝     ╚═╝  ╚═╝
+
+root@neural:~# _`,
+            
+            // AI Brain
+            `    ╭───────────────╮
+   ╭──│    ╭──────╮     │──╮
+   │  │   ╱        ╲    │  │
+   │  ╰──╱    AI     ╲──╯  │
+   ╰─────╲            ╱────╯
+   ╭─────╱  ╲──────╱  ╲────╮
+   │    ╱    ╲    ╱    ╲   │
+   ╰────╲     ╰────╯    ╱──╯
+   ╰─────╮  ╭────╮    ╭──╯
+   ╰─────╲─╱      ╲───╱──╯
+         ╲╱        ╲╱
+    ╭───────────────╮
+    │   ██████████   │
+    │  ██         ██  │
+    │ ██  █████  ██ █ │
+    │ ██ ██     ██ █  │
+    │ ██ ██ ███ ██ █  │
+    │ ██ ██     ██ █  │
+    │ ██  █████  ██   │
+    │   ██       ██   │
+    ╰───────────────╯`,
+
+            // Cyber Cat
+            `    /\\_/\\  
+   ( o.o ) 
+    > ^ <
+   /|   |\\
+  (_|   |_)
+    ╔═══════╗
+    ║ NEURAL║
+    ║  CAT  ║
+    ╚═══════╝`,
+            
+            // Drone
+            `      ╭───╮
+    ╭────│   │────╮
+    │   ╰─┬─┘   │
+    │     │     │
+   ╭┴────┴────┴╮
+   │  ▄▄▄▄▄▄▄  │
+   │  ███████  │
+   ╰───────────╯
+    ╭─────────╮
+    │◉       ◉│
+    │ ○     ○ │
+    │ ◉       ◉│
+    ╰─────────╯`,
+            
+            // Mainframe
+            `╔══════════════════════════════╗
+║  ╔══╗ ╔══╗ ╔══╗ ╔══╗ ╔══╗ ╔══╗ ╔══╗ ║
+║  ╚╦╝ ╚╦╝ ╚╦╝ ╚╦╝ ╚╦╝ ╚╦╝ ╚╦╝ ╚╦╝ ║
+║   ║   ║   ║   ║   ║   ║   ║   ║  ║
+║  ╔╩╗  ╔╩╗  ╔╩╗  ╔╩╗  ╔╩╗  ╔╩╗  ╔╩╗ ║
+║  ╚╩╝  ╚╩╝  ╚╩╝  ╚╩╝  ╚╩╝  ╚╩╝  ╚╩╝ ║
+║  ╔╦╗  ╔╦╗  ╔╦╗  ╔╦╗  ╔╦╗  ╔╦╗  ╔╦╗ ║
+║  ╚═╝  ╚═╝  ╚═╝  ╚═╝  ╚═╝  ╚═╝  ╚═╝ ║
+╚══════════════════════════════╝
+   ╔═══════════════════════════╗
+   ║  MAINFRAME ONLINE        ║
+   ║  PROCESSING QUERY...     ║
+   ╚═══════════════════════════╝`
+        ];
+
+        function generateAscii(text) {
+            if (!text || text.trim() === '') {
+                // Random art
+                const art = asciiArts[Math.floor(Math.random() * asciiArts.length)];
+                addMessage('🎨 **ASCII Art**\n\n' + art, false);
+            } else {
+                // Simple text to ASCII (uppercase)
+                addMessage('🎨 **ASCII Art: ' + text + '**\n\n```\n' + text.toUpperCase().split('').map(c => {
+                    // Simple ASCII representation
+                    const chars = {
+                        'A': ' A ', 'B': '8 ', 'C': '( ', 'D': 'D ', 'E': '3 ',
+                        'F': 'F ', 'G': '6 ', 'H': 'H ', 'I': '1 ', 'J': 'J ',
+                        'K': 'K ', 'L': '1 ', 'M': 'M ', 'N': 'N ', 'O': '0 ',
+                        'P': 'P ', 'Q': 'Q ', 'R': 'R ', 'S': '5 ', 'T': '7 ',
+                        'U': 'U ', 'V': 'V ', 'W': 'W ', 'X': 'X ', 'Y': 'Y ',
+                        'Z': '2 ', '0': '0 ', '1': '1 ', '2': '2 ', '3': '3 ',
+                        '4': '4 ', '5': '5 ', '6': '6 ', '7': '7 ', '8': '8 ',
+                        '9': '9 ', ' ': '  '
+                    };
+                    return chars[c] || c + ' ';
+                }).join('') + '\n```', false);
+            }
+        }
+
+        // ASCII Generator button
+        document.getElementById('asciiBtn').addEventListener('click', () => {
+            generateAscii();
+        });
+
+        // Clear chat
+        document.getElementById('clearChatBtn').addEventListener('click', () => {
+            if (confirm('Clear all chat history?')) {
+                chatMessages.innerHTML = `<div class="message ai">
+                    <div class="message-label">NEURAL_AI</div>
+                    <div class="message-text">System cleared. Neural interface ready.<span class="cursor"></span></div>
+                </div>`;
+                localStorage.removeItem(STORAGE_KEYS.chatHistory);
+            }
+        });
+
+        // ========================================
+        // SETTINGS PANEL
+        // ========================================
+        const settingsPanel = document.getElementById('settingsPanel');
+        const overlay = document.getElementById('overlay');
+
+        document.getElementById('settingsBtn').addEventListener('click', () => {
+            settingsPanel.classList.add('show');
+            overlay.classList.add('show');
+        });
+
+        document.getElementById('closeSettings').addEventListener('click', () => {
+            settingsPanel.classList.remove('show');
+            overlay.classList.remove('show');
+        });
+
+        overlay.addEventListener('click', () => {
+            settingsPanel.classList.remove('show');
+            overlay.classList.remove('show');
+        });
+
+        // Theme toggle
+        document.getElementById('themeSelect').addEventListener('change', (e) => {
+            settings.theme = e.target.value;
+            localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(settings));
+            applySettings();
+        });
+
+        // Matrix intensity
+        document.getElementById('matrixIntensity').addEventListener('input', (e) => {
+            settings.matrixIntensity = parseFloat(e.target.value);
+            localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(settings));
+            if (window.avatars) {
+                window.avatars.setIntensity(settings.matrixIntensity);
+            }
+        });
+
+        // Primary color
+        document.getElementById('primaryColor').addEventListener('change', (e) => {
+            settings.primaryColor = e.target.value;
+            localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(settings));
+            applySettings();
+        });
+
+        // Test voice
+        document.getElementById('testVoiceBtn').addEventListener('click', () => {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance('Neural interface activated. Voice systems online.');
+                utterance.rate = 0.9;
+                speechSynthesis.speak(utterance);
+            } else {
+                alert('Speech synthesis not supported in this browser.');
+            }
+        });
+
+        // ========================================
+        // DUCKDUCKGO INSTANT ANSWER API
+        // ========================================
+        async function searchDuckDuckGo(query) {
+            try {
+                const response = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`);
+                
+                if (!response.ok) throw new Error('Search failed');
+                
+                const data = await response.json();
+                
+                let answer = null;
+                let definition = null;
+                let relatedTopics = [];
+                
+                if (data.AbstractText) {
+                    answer = data.AbstractText;
+                } else if (data.Answer) {
+                    answer = data.Answer;
+                }
+                
+                if (data.Definition) {
+                    definition = data.Definition;
+                }
+                
+                if (data.RelatedTopics) {
+                    relatedTopics = data.RelatedTopics.slice(0, 5).map(t => t.Text || t.Name).filter(Boolean);
+                }
+                
+                return {
+                    success: true,
+                    answer: answer,
+                    definition: definition,
+                    relatedTopics: relatedTopics,
+                    rawData: data
+                };
+            } catch (error) {
+                console.error('Search error:', error);
+                return { success: false, error: error.message };
+            }
+        }
+
+        // ========================================
+        // DUCKDUCKGO SEARCH (UI)
+        // ========================================
+        const ddgInput = document.getElementById('ddgInput');
+        const ddgBtn = document.getElementById('ddgBtn');
+
+        ddgBtn.addEventListener('click', () => {
+            const query = ddgInput.value.trim();
+            if (query) {
+                window.open(`https://duckduckgo.com/?q=${encodeURIComponent(query)}`, '_blank');
+                saveSearchHistory(query);
+            }
+        });
+
+        ddgInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') ddgBtn.click();
+        });
+
+        // ========================================
+        // WIKI SEARCH
+        // ========================================
+        const wikiSearch = document.getElementById('wikiSearch');
+        const wikiContent = document.getElementById('wikiContent');
+
+        const wikiData = [
+            {
+                title: '// NEURAL NETWORKS',
+                tags: ['ML', 'DEEP LEARNING', 'AI'],
+                sections: [
+                    { heading: '>> OVERVIEW', content: 'Artificial neural networks are computing systems inspired by biological neural networks. They consist of interconnected nodes (neurons) that process information using connectionist approaches.' },
+                    { heading: '>> ARCHITECTURE', content: 'Typical architectures include input layers, hidden layers, and output layers. Deep learning utilizes multiple hidden layers to model complex patterns.' },
+                    { heading: '>> APPLICATIONS', content: 'Image recognition, natural language processing, speech recognition, autonomous vehicles, and scientific research.' }
+                ]
+            },
+            {
+                title: '// LARGE LANGUAGE MODELS',
+                tags: ['LLM', 'NLP', 'TRANSFORMERS'],
+                sections: [
+                    { heading: '>> OVERVIEW', content: 'LLMs are deep learning models trained on vast amounts of text data. They can understand, generate, and manipulate human language at scale.' },
+                    { heading: '>> ARCHITECTURE', content: 'Based on the transformer architecture, using self-attention mechanisms to process sequential data. Models like GPT, Claude, and Llama use this approach.' },
+                    { heading: '>> CAPABILITIES', content: 'Text generation, translation, summarization, question answering, code writing, and creative writing.' }
+                ]
+            },
+            {
+                title: '// CYBERPUNK CULTURE',
+                tags: ['CYBERPUNK', 'TECHNO', 'DYSTOPIA'],
+                sections: [
+                    { heading: '>> OVERVIEW', content: 'A subgenre of science fiction in a dystopian futuristic setting. Characterized by advanced technology and social decay.' },
+                    { heading: '>> THEMES', content: 'Corporate control, hacking, artificial intelligence, body modification, virtual reality, and urban decay.' },
+                    { heading: '>> INFLUENCE', content: 'Major influence on tech culture, fashion, music, and gaming. Companies like Neovideo draw from this aesthetic.' }
+                ]
+            },
+            {
+                title: '// MACHINE LEARNING',
+                tags: ['ML', 'DATA SCIENCE', 'ALGORITHMS'],
+                sections: [
+                    { heading: '>> OVERVIEW', content: 'Machine learning is a subset of AI that enables systems to learn and improve from experience without being explicitly programmed.' },
+                    { heading: '>> TYPES', content: 'Supervised learning, unsupervised learning, and reinforcement learning.' },
+                    { heading: '>> APPLICATIONS', content: 'Recommendation systems, fraud detection, image recognition, and natural language processing.' }
+                ]
+            },
+            {
+                title: '// WEB DEVELOPMENT',
+                tags: ['HTML', 'CSS', 'JAVASCRIPT', 'CODING'],
+                sections: [
+                    { heading: '>> OVERVIEW', content: 'The process of building websites and web applications for the internet.' },
+                    { heading: '>> LANGUAGES', content: 'HTML for structure, CSS for styling, JavaScript for interactivity. Frameworks like React, Vue, and Angular are popular.' },
+                    { heading: '>> CAREER', content: 'One of the most in-demand tech skills. Full-stack developers work on both frontend and backend.' }
+                ]
+            },
+            {
+                title: '// BLOCKCHAIN',
+                tags: ['CRYPTO', 'WEB3', 'DECENTRALIZED'],
+                sections: [
+                    { heading: '>> OVERVIEW', content: 'A distributed ledger technology that records transactions across many computers.' },
+                    { heading: '>> BITCOIN', content: 'The first cryptocurrency, created in 2009. Uses blockchain to enable peer-to-peer digital money.' },
+                    { heading: '>> SMART CONTRACTS', content: 'Self-executing contracts with terms directly written into code, running on blockchain platforms like Ethereum.' }
+                ]
+            }
+        ];
+
+        wikiSearch.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const filtered = wikiData.filter(article => 
+                article.title.toLowerCase().includes(query) ||
+                article.tags.some(t => t.toLowerCase().includes(query)) ||
+                article.sections.some(s => s.content.toLowerCase().includes(query))
+            );
+            
+            if (filtered.length === 0) {
+                wikiContent.innerHTML = '<div style="padding:20px;color:var(--text-secondary)">>> NO MATCHES FOUND</div>';
+                return;
+            }
+
+            wikiContent.innerHTML = filtered.map(article => `
+                <div class="wiki-article">
+                    <h2 class="wiki-title">${article.title}</h2>
+                    <div class="wiki-section">
+                        ${article.tags.map(t => `<span class="wiki-tag">${t}</span>`).join('')}
+                    </div>
+                    ${article.sections.map(s => `
+                        <div class="wiki-section">
+                            <h3>${s.heading}</h3>
+                            <p>${s.content}</p>
+                        </div>
+                    `).join('')}
+                </div>
+            `).join('');
+        });
+
+        // ========================================
+        // GRAPH VISUALIZATION (CANVAS)
+        // ========================================
+        class CyberAvatar {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.resize();
+                
+                this.mouseX = this.canvas.width / 2;
+                this.mouseY = this.canvas.height / 2;
+                this.eyeFollowSpeed = 0.08;
+                
+                this.avatarX = this.canvas.width / 2;
+                this.avatarY = this.canvas.height / 2;
+                this.avatarSize = Math.min(this.canvas.width, this.canvas.height) * 0.25;
+                
+                this.expression = 'idle'; // idle, talking, thinking, happy, confused, excited
+                this.expressionTimer = 0;
+                this.mouthOpenness = 0;
+                this.eyeBlink = 0;
+                this.intensity = 1;
+                
+                this.particles = [];
+                this.matrixChars = [];
+                
+                this.initParticles();
+                this.initMatrix();
+                
+                this.lastTime = performance.now();
+                this.fps = 60;
+                this.frameCount = 0;
+                this.fpsUpdateTime = 0;
+                
+                window.addEventListener('mousemove', (e) => this.onMouseMove(e));
+                window.addEventListener('resize', () => this.resize());
+            }
+
+            setIntensity(value) {
+                this.intensity = value;
+            }
+
+            resize() {
+                this.canvas.width = this.canvas.parentElement.clientWidth;
+                this.canvas.height = this.canvas.parentElement.clientHeight;
+                this.avatarX = this.canvas.width / 2;
+                this.avatarY = this.canvas.height / 2;
+                this.avatarSize = Math.min(this.canvas.width, this.canvas.height) * 0.22;
+            }
+
+            onMouseMove(e) {
+                const rect = this.canvas.getBoundingClientRect();
+                this.mouseX = e.clientX - rect.left;
+                this.mouseY = e.clientY - rect.top;
+            }
+
+            initParticles() {
+                this.particles = [];
+                const count = 30 + Math.floor(this.intensity * 20);
+                for (let i = 0; i < count; i++) {
+                    this.particles.push({
+                        x: Math.random() * this.canvas.width,
+                        y: Math.random() * this.canvas.height,
+                        vx: (Math.random() - 0.5) * (0.3 + this.intensity * 0.3),
+                        vy: (Math.random() - 0.5) * (0.3 + this.intensity * 0.3),
+                        size: Math.random() * 2 + 1,
+                        alpha: Math.random() * 0.5 + 0.2,
+                        connected: false
+                    });
+                }
+            }
+
+            initMatrix() {
+                this.matrixChars = [];
+                const cols = Math.floor(this.canvas.width / (20 / Math.max(0.5, this.intensity)));
+                for (let i = 0; i < cols; i++) {
+                    this.matrixChars.push({
+                        x: i * 20,
+                        y: Math.random() * -this.canvas.height,
+                        speed: (Math.random() * 2 + 1) * this.intensity,
+                        char: this.getRandomChar(),
+                        alpha: 0
+                    });
+                }
+            }
+
+            getRandomChar() {
+                const chars = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEF@#$%&*<>[]{}';
+                return chars[Math.floor(Math.random() * chars.length)];
+            }
+
+            setExpression(expr) {
+                this.expression = expr;
+                this.expressionTimer = 60;
+            }
+
+            update() {
+                const now = performance.now();
+                const delta = now - this.lastTime;
+                this.lastTime = now;
+                
+                // FPS calculation
+                this.frameCount++;
+                if (now - this.fpsUpdateTime > 1000) {
+                    this.fps = Math.round(this.frameCount * 1000 / (now - this.fpsUpdateTime));
+                    this.frameCount = 0;
+                    this.fpsUpdateTime = now;
+                    document.getElementById('fpsCount').textContent = this.fps;
+                }
+
+                // Update particles
+                this.particles.forEach(p => {
+                    p.x += p.vx * this.intensity;
+                    p.y += p.vy * this.intensity;
+                    
+                    if (p.x < 0) p.x = this.canvas.width;
+                    if (p.x > this.canvas.width) p.x = 0;
+                    if (p.y < 0) p.y = this.canvas.height;
+                    if (p.y > this.canvas.height) p.y = 0;
+
+                    const dx = p.x - this.avatarX;
+                    const dy = p.y - this.avatarY;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    p.connected = dist < this.avatarSize * 2;
+                });
+
+                // Update matrix rain
+                if (this.intensity > 0) {
+                    this.matrixChars.forEach(m => {
+                        m.y += m.speed;
+                        if (m.y > this.canvas.height) {
+                            m.y = -20;
+                            m.char = this.getRandomChar();
+                        }
+                        m.alpha = Math.min(m.alpha + 0.02, 0.5 * this.intensity);
+                    });
+                }
+
+                // Expression timer
+                if (this.expressionTimer > 0) {
+                    this.expressionTimer--;
+                } else {
+                    this.expression = 'idle';
+                }
+
+                // Update avatar status
+                const statusEl = document.getElementById('avatarStatus');
+                const nodeCountEl = document.getElementById('nodeCount');
+                
+                const expressionColors = {
+                    'talking': { status: 'SPEAKING', color: '#00d4ff' },
+                    'thinking': { status: 'PROCESSING', color: '#ff00ff' },
+                    'happy': { status: 'HAPPY', color: '#f0ff00' },
+                    'confused': { status: 'ANALYZING', color: '#ff6600' },
+                    'excited': { status: 'EXCITED', color: '#00ff41' },
+                    'idle': { status: 'IDLE', color: '#00ff41' }
+                };
+                
+                const expr = expressionColors[this.expression] || expressionColors.idle;
+                statusEl.textContent = expr.status;
+                statusEl.style.color = expr.color;
+                
+                // Mouth animation based on expression
+                if (this.expression === 'talking' || this.expression === 'excited') {
+                    this.mouthOpenness = 0.3 + Math.sin(now * 0.015) * 0.2;
+                } else if (this.expression === 'happy') {
+                    this.mouthOpenness = 0.15;
+                } else if (this.expression === 'confused') {
+                    this.mouthOpenness = 0.1 + Math.sin(now * 0.005) * 0.05;
+                } else {
+                    this.mouthOpenness = 0.05;
+                }
+                
+                nodeCountEl.textContent = this.particles.filter(p => p.connected).length;
+
+                // Eye blink
+                if (Math.random() < 0.003 * this.intensity) {
+                    this.eyeBlink = 10;
+                }
+                if (this.eyeBlink > 0) this.eyeBlink--;
+            }
+
+            draw() {
+                const ctx = this.ctx;
+                
+                // Clear with dark background
+                ctx.fillStyle = '#0a0a0f';
+                ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+                // Draw matrix rain (if intensity > 0)
+                if (this.intensity > 0) {
+                    ctx.font = '14px monospace';
+                    this.matrixChars.forEach(m => {
+                        ctx.fillStyle = `rgba(0, 255, 65, ${m.alpha})`;
+                        ctx.fillText(m.char, m.x, m.y);
+                    });
+                }
+
+                // Draw connections
+                ctx.strokeStyle = 'rgba(0, 255, 65, 0.15)';
+                ctx.lineWidth = 1;
+                this.particles.forEach((p1, i) => {
+                    if (p1.connected && this.intensity > 0) {
+                        ctx.beginPath();
+                        ctx.moveTo(p1.x, p1.y);
+                        ctx.lineTo(this.avatarX, this.avatarY);
+                        ctx.stroke();
+                    }
+                    
+                    this.particles.slice(i + 1).forEach(p2 => {
+                        const dx = p1.x - p2.x;
+                        const dy = p1.y - p2.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < 80) {
+                            ctx.strokeStyle = `rgba(0, 212, 255, ${0.3 * (1 - dist / 80) * this.intensity})`;
+                            ctx.beginPath();
+                            ctx.moveTo(p1.x, p1.y);
+                            ctx.lineTo(p2.x, p2.y);
+                            ctx.stroke();
+                        }
+                    });
+                });
+
+                // Draw particles
+                this.particles.forEach(p => {
+                    const alpha = p.connected ? p.alpha : p.alpha * 0.5 * this.intensity;
+                    ctx.fillStyle = p.connected ? 
+                        `rgba(0, 255, 65, ${alpha})` : 
+                        `rgba(0, 212, 255, ${alpha})`;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size * this.intensity, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+
+                // Draw avatar
+                this.drawAvatar();
+            }
+
+            drawAvatar() {
+                const ctx = this.ctx;
+                const x = this.avatarX;
+                const y = this.avatarY;
+                const size = this.avatarSize;
+
+                // Avatar glow
+                const gradient = ctx.createRadialGradient(x, y, 0, x, y, size * 1.5);
+                gradient.addColorStop(0, 'rgba(0, 255, 65, 0.1)');
+                gradient.addColorStop(0.5, 'rgba(0, 212, 255, 0.05)');
+                gradient.addColorStop(1, 'transparent');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(x - size * 1.5, y - size * 1.5, size * 3, size * 3);
+
+                // Face background - geometric
+                ctx.fillStyle = '#0d0d14';
+                ctx.strokeStyle = '#00ff41';
+                ctx.lineWidth = 2;
+                
+                ctx.beginPath();
+                ctx.moveTo(x - size * 0.8, y - size * 0.6);
+                ctx.lineTo(x + size * 0.8, y - size * 0.6);
+                ctx.lineTo(x + size * 0.7, y + size * 0.7);
+                ctx.lineTo(x - size * 0.7, y + size * 0.7);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Face grid lines
+                ctx.strokeStyle = 'rgba(0, 255, 65, 0.2)';
+                ctx.lineWidth = 1;
+                for (let i = 0; i < 8; i++) {
+                    const offset = (i - 4) * size * 0.2;
+                    ctx.beginPath();
+                    ctx.moveTo(x + offset, y - size * 0.5);
+                    ctx.lineTo(x + offset * 0.8, y + size * 0.6);
+                    ctx.stroke();
+                }
+
+                // Eyes
+                const eyeOffsetX = size * 0.3;
+                const eyeOffsetY = -size * 0.15;
+                const eyeSize = size * 0.15;
+
+                const targetX = (this.mouseX - x) * 0.3;
+                const targetY = (this.mouseY - y) * 0.3;
+                const clamp = (val, max) => Math.max(-max, Math.min(max, val));
+                
+                const eyeLookX = clamp(targetX, eyeSize * 0.6);
+                const eyeLookY = clamp(targetY, eyeSize * 0.6);
+
+                // Expression modifies eye shape
+                let eyeStretch = 1;
+                if (this.expression === 'happy') eyeStretch = 0.6;
+                if (this.expression === 'confused') eyeStretch = 1.3;
+
+                // Left eye
+                const leftEyeX = x - eyeOffsetX;
+                const leftEyeY = y + eyeOffsetY;
+                
+                if (this.eyeBlink > 0) {
+                    ctx.strokeStyle = '#00ff41';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(leftEyeX - eyeSize, leftEyeY);
+                    ctx.lineTo(leftEyeX + eyeSize, leftEyeY);
+                    ctx.stroke();
+                } else {
+                    ctx.fillStyle = 'rgba(0, 255, 65, 0.3)';
+                    ctx.beginPath();
+                    ctx.arc(leftEyeX, leftEyeY, eyeSize * 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#1a1a25';
+                    ctx.strokeStyle = '#00ff41';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.ellipse(leftEyeX, leftEyeY, eyeSize, eyeSize * eyeStretch, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#00ff41';
+                    ctx.shadowColor = '#00ff41';
+                    ctx.shadowBlur = 10;
+                    ctx.beginPath();
+                    ctx.arc(leftEyeX + eyeLookX, leftEyeY + eyeLookY, eyeSize * 0.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                }
+
+                // Right eye
+                const rightEyeX = x + eyeOffsetX;
+                const rightEyeY = y + eyeOffsetY;
+
+                if (this.eyeBlink > 0) {
+                    ctx.strokeStyle = '#00ff41';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(rightEyeX - eyeSize, rightEyeY);
+                    ctx.lineTo(rightEyeX + eyeSize, rightEyeY);
+                    ctx.stroke();
+                } else {
+                    ctx.fillStyle = 'rgba(0, 255, 65, 0.3)';
+                    ctx.beginPath();
+                    ctx.arc(rightEyeX, rightEyeY, eyeSize * 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#1a1a25';
+                    ctx.strokeStyle = '#00ff41';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.ellipse(rightEyeX, rightEyeY, eyeSize, eyeSize * eyeStretch, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#00ff41';
+                    ctx.shadowColor = '#00ff41';
+                    ctx.shadowBlur = 10;
+                    ctx.beginPath();
+                    ctx.arc(rightEyeX + eyeLookX, rightEyeY + eyeLookY, eyeSize * 0.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                }
+
+                // Mouth
+                const mouthY = y + size * 0.35;
+                const mouthWidth = size * 0.4;
+                const mouthHeight = size * this.mouthOpenness;
+
+                if (this.mouthOpenness > 0.15) {
+                    ctx.fillStyle = '#0a0a0f';
+                    ctx.strokeStyle = '#00d4ff';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.ellipse(x, mouthY, mouthWidth, mouthHeight, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    // Teeth
+                    ctx.fillStyle = '#00ff41';
+                    ctx.fillRect(x - mouthWidth + 5, mouthY - mouthHeight, mouthWidth * 2 - 10, 3);
+                } else if (this.expression === 'happy') {
+                    // Happy smile
+                    ctx.strokeStyle = '#00ff41';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(x, mouthY, mouthWidth * 0.8, 0.2 * Math.PI, 0.8 * Math.PI);
+                    ctx.stroke();
+                } else {
+                    // Closed mouth (neutral)
+                    ctx.strokeStyle = '#00d4ff';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(x - mouthWidth * 0.7, mouthY);
+                    ctx.quadraticCurveTo(x, mouthY + 5, x + mouthWidth * 0.7, mouthY);
+                    ctx.stroke();
+                }
+
+                // Decorative elements
+                ctx.font = `${size * 0.08}px monospace`;
+                ctx.fillStyle = 'rgba(0, 212, 255, 0.5)';
+                ctx.fillText('v2.0', x - size * 0.9, y + size * 0.8);
+                ctx.fillText('NEURAL', x + size * 0.5, y - size * 0.7);
+            }
+
+            start() {
+                const animate = () => {
+                    this.update();
+                    this.draw();
+                    requestAnimationFrame(animate);
+                };
+                animate();
+            }
+        }
+
+        // Initialize
+        const canvas = document.getElementById('graphCanvas');
+        window.avatars = new CyberAvatar(canvas);
+        window.avatars.setIntensity(settings.matrixIntensity);
+        window.avatars.start();
+
+        // Matrix slider
+        document.getElementById('matrixSlider').addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            settings.matrixIntensity = val;
+            localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(settings));
+            if (window.avatars) {
+                window.avatars.setIntensity(val);
+            }
+        });
+
+        // Avatar status update helper
+        function updateAvatarStatus(status) {
+            const statusEl = document.getElementById('avatarStatus');
+            if (statusEl) {
+                statusEl.textContent = status;
+            }
+        }
+
+        // Initialize search history
+        renderSearchHistory();
+        
+        // Load saved chat
+        loadChatHistory();
+
+        // Register Service Worker for offline support
+        if ('serviceWorker' in navigator) {
+            // Code would go here for full PWA support
+            console.log('Service Worker available (PWA ready)');
+        }
+
+        // Error boundary
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+            console.error('Error: ', msg, '\nURL: ', url, '\nLine: ', lineNo, '\nColumn: ', columnNo, '\nError object: ', error);
+            return false;
+        };
+
+        console.log('%c NEURAL WIKI v2.0 ', 'background: #00ff41; color: #000; font-size: 20px; font-weight: bold;');
+        console.log('%c System initialized successfully ', 'color: #00d4ff;');
+    </script>
+</body>
+</html>
